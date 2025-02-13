@@ -12,12 +12,19 @@ const xray_module_1 = require("./xray/xray.module");
 const mongoDB_module_1 = require("./mongoDB.module");
 const rmq_module_1 = require("./consumer/rmq.module");
 const signals_module_1 = require("./signals/signals.module");
+const Logger_module_1 = require("./Logger.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [xray_module_1.XrayDataModule, mongoDB_module_1.MongoModule, signals_module_1.SignalsModule, rmq_module_1.RabbitMQModule],
+        imports: [
+            xray_module_1.XrayDataModule,
+            mongoDB_module_1.MongoModule,
+            signals_module_1.SignalsModule,
+            rmq_module_1.RabbitMQModule,
+            Logger_module_1.LoggerModule,
+        ],
         controllers: [],
         providers: [],
     })

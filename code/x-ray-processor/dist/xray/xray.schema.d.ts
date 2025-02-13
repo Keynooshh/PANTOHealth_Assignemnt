@@ -1,19 +1,17 @@
 import { Document } from 'mongoose';
-export declare class Location {
+export declare class Coordinates {
     x: number;
     y: number;
-    speed: number;
 }
 export declare class DataPoint {
     time: number;
-    location: Location;
-}
-export declare class DeviceData {
-    data: DataPoint[];
-    time: number;
+    coordinates: Coordinates;
+    speed: number;
 }
 export declare class XrayData extends Document {
-    deviceId: Map<string, DeviceData>;
+    data: DataPoint[];
+    time: number;
+    deviceId: string;
 }
 export declare const XrayDataSchema: import("mongoose").Schema<XrayData, import("mongoose").Model<XrayData, any, any, any, Document<unknown, any, XrayData> & XrayData & Required<{
     _id: unknown;

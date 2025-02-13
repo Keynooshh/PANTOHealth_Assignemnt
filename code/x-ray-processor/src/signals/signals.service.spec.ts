@@ -3,34 +3,68 @@ import { SignalsDataService } from './signals.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SignalData } from './signals.schema';
-import { DeviceData } from '../xray/xray.schema';
+import { Coordinates, DataPoint, XrayData } from '../xray/xray.schema';
 import { NotFoundException } from '@nestjs/common';
+import { AppLogger } from 'src/AppLogger.service';
 
 describe('SignalsDataService', () => {
   let service: SignalsDataService;
   let model: Model<SignalData>;
+  let xrayDataModel: Model<XrayData>;
+  let logger: AppLogger;
+
+  const coordinates: Coordinates = {
+    x: 1,
+    y: 2,
+  };
+  const dataPoint: DataPoint = {
+    speed: 3,
+    time: 1234,
+    coordinates: coordinates,
+  };
+
+  const mockXrayData = {
+    deviceId: 'SomeDevice',
+    time: 123456789000,
+    data: [{ speed: 3, time: 1234, coordinates: { x: 1, y: 2 } }],
+  };
 
   const mockSignalData = {
-    deviceId: 'device123',
-    dataLength: 10,
-    time: 1234567890,
+    deviceId: mockXrayData.deviceId,
+    time: mockXrayData.time,
+    dataLength: mockXrayData.data.length,
+    timeRange: { minTime: dataPoint.time, maxTime: dataPoint.time },
+    averageSpeed: dataPoint.speed,
+    totalDistance: Math.sqrt(
+      Math.pow(coordinates.x - coordinates.x, 2) +
+        Math.pow(coordinates.y - coordinates.y, 2),
+    ),
+    geoData: {
+      minX: coordinates.x,
+      maxX: coordinates.x,
+      minY: coordinates.y,
+      maxY: coordinates.y,
+    },
+
     save: jest.fn().mockResolvedValue({}),
   };
 
   mockSignalData.save.mockResolvedValue(mockSignalData);
 
-  const mockDeviceData: DeviceData = {
-    data: [
-      {
-        time: 1234567890,
-        location: {
-          x: 1,
-          y: 2,
-          speed: 3,
-        },
-      },
-    ],
-    time: 1234567890,
+  const mockLogger = {
+    log: jest.fn(),
+    error: jest.fn(),
+    setContext: jest.fn(),
+  };
+
+  const mockXrayDataModel = {
+    create: jest.fn().mockResolvedValue(mockXrayData),
+    find: jest.fn().mockReturnValue({
+      batchSize: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([mockXrayData]),
+    }),
+    findById: jest.fn().mockResolvedValue(mockXrayData),
+    save: jest.fn().mockResolvedValue(mockXrayData),
   };
 
   beforeEach(async () => {
@@ -48,19 +82,33 @@ describe('SignalsDataService', () => {
               exec: jest.fn().mockResolvedValue([mockSignalData]),
             }),
             findById: jest.fn().mockImplementation((id) => ({
-                exec: jest.fn().mockResolvedValue(id === 'nonExistentId' ? null : { ...mockSignalData }),
-              })),
-                            
+              exec: jest
+                .fn()
+                .mockResolvedValue(
+                  id === 'nonExistentId' ? null : { ...mockSignalData },
+                ),
+            })),
+
             findByIdAndDelete: jest.fn().mockResolvedValue(mockSignalData),
             findByIdAndUpdate: jest.fn().mockResolvedValue(mockSignalData),
             exec: jest.fn().mockResolvedValue([mockSignalData]),
           },
+        },
+        {
+          provide: AppLogger,
+          useValue: mockLogger,
+        },
+        {
+          provide: getModelToken(XrayData.name),
+          useValue: mockXrayDataModel,
         },
       ],
     }).compile();
 
     service = module.get<SignalsDataService>(SignalsDataService);
     model = module.get<Model<SignalData>>(getModelToken(SignalData.name));
+    xrayDataModel = module.get<Model<XrayData>>(getModelToken(XrayData.name));
+    logger = module.get<AppLogger>(AppLogger);
   });
 
   it('should be defined', () => {
@@ -77,12 +125,24 @@ describe('SignalsDataService', () => {
 
   describe('processSignalData', () => {
     it('should process signal data and create a new signal data entry', async () => {
-      const deviceId = 'device123';
-      await service.processSignalData(mockDeviceData, deviceId);
+      const xrayData = await xrayDataModel.create(mockXrayData);
+      await service.processSignalData(xrayData);
       expect(model.create).toHaveBeenCalledWith({
-        deviceId: deviceId,
-        time: mockDeviceData.time,
-        dataLength: mockDeviceData.data.length,
+        deviceId: mockXrayData.deviceId,
+        time: mockXrayData.time,
+        dataLength: mockXrayData.data.length,
+        timeRange: { minTime: dataPoint.time, maxTime: dataPoint.time },
+        averageSpeed: dataPoint.speed,
+        totalDistance: Math.sqrt(
+          Math.pow(coordinates.x - coordinates.x, 2) +
+            Math.pow(coordinates.y - coordinates.y, 2),
+        ),
+        geoData: {
+          minX: coordinates.x,
+          maxX: coordinates.x,
+          minY: coordinates.y,
+          maxY: coordinates.y,
+        },
       });
     });
   });

@@ -2,11 +2,7 @@ import { SignalsDataService } from './signals.service';
 export declare class SignalsController {
     private readonly signalDataService;
     constructor(signalDataService: SignalsDataService);
-    insertXrayData(createSignalData: any): Promise<import("mongoose").Document<unknown, {}, import("./signals.schema").SignalData> & import("./signals.schema").SignalData & Required<{
-        _id: unknown;
-    }> & {
-        __v: number;
-    }>;
+    insertXrayData(createSignalData: any): Promise<import("./signals.schema").SignalData>;
     getAllSignals(): Promise<(import("mongoose").Document<unknown, {}, import("./signals.schema").SignalData> & import("./signals.schema").SignalData & Required<{
         _id: unknown;
     }> & {

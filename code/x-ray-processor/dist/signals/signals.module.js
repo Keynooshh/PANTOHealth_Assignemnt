@@ -12,6 +12,7 @@ const mongoose_1 = require("@nestjs/mongoose");
 const signals_schema_1 = require("./signals.schema");
 const signals_controller_1 = require("./signals.controller");
 const signals_service_1 = require("./signals.service");
+const Logger_module_1 = require("../Logger.module");
 let SignalsModule = class SignalsModule {
 };
 exports.SignalsModule = SignalsModule;
@@ -21,6 +22,7 @@ exports.SignalsModule = SignalsModule = __decorate([
             mongoose_1.MongooseModule.forFeature([
                 { name: signals_schema_1.SignalData.name, schema: signals_schema_1.signalDataSchema },
             ]),
+            Logger_module_1.LoggerModule,
         ],
         controllers: [signals_controller_1.SignalsController],
         providers: [signals_service_1.SignalsDataService],

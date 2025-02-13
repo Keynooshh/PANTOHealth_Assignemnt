@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var XrayDataService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.XrayDataService = void 0;
 const mongoose_1 = require("mongoose");
@@ -18,23 +19,38 @@ const common_1 = require("@nestjs/common");
 const mongoose_2 = require("@nestjs/mongoose");
 const xray_schema_1 = require("./xray.schema");
 const signals_service_1 = require("../signals/signals.service");
-let XrayDataService = class XrayDataService {
-    constructor(xrayDataModel, signalDataService) {
+const AppLogger_service_1 = require("../AppLogger.service");
+let XrayDataService = XrayDataService_1 = class XrayDataService {
+    constructor(xrayDataModel, signalDataService, logger) {
         this.xrayDataModel = xrayDataModel;
         this.signalDataService = signalDataService;
+        this.logger = logger;
+        logger.setContext(XrayDataService_1.name);
     }
     async create(xrayData) {
-        const createData = this.xrayDataModel({
-            deviceId: new Map(Object.entries(xrayData)),
-        });
-        return this.xrayDataModel.insertOne(createData);
+        try {
+            const deviceId = Object.keys(xrayData)[0];
+            const { data, time } = xrayData[deviceId];
+            const ParsedData = data.map((entry) => {
+                const [time, [x, y, speed]] = entry;
+                return { time, coordinates: { x, y }, speed };
+            });
+            const createData = new this.xrayDataModel({
+                deviceId: deviceId,
+                time: time,
+                data: ParsedData,
+            }).save();
+            this.logger.log('Saved XrayData in Mongo.');
+            return createData;
+        }
+        catch (error) {
+            this.logger.error('Encounterd error while saving XrayData in Mongo:\n' + error.message);
+            return error.message;
+        }
     }
     async processData(message) {
-        const result = this.create(message);
-        const DeviceMapData = (await result).deviceId;
-        DeviceMapData.forEach((deviceData, deviceId) => {
-            this.signalDataService.processSignalData(deviceData, deviceId);
-        });
+        const DeviceData = await this.create(message);
+        this.signalDataService.processSignalData(DeviceData);
     }
     getAll() {
         return this.xrayDataModel.find().batchSize(10).exec();
@@ -44,10 +60,11 @@ let XrayDataService = class XrayDataService {
     }
 };
 exports.XrayDataService = XrayDataService;
-exports.XrayDataService = XrayDataService = __decorate([
+exports.XrayDataService = XrayDataService = XrayDataService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_2.InjectModel)(xray_schema_1.XrayData.name)),
     __metadata("design:paramtypes", [mongoose_1.Model,
-        signals_service_1.SignalsDataService])
+        signals_service_1.SignalsDataService,
+        AppLogger_service_1.AppLogger])
 ], XrayDataService);
 //# sourceMappingURL=xray.service.js.map

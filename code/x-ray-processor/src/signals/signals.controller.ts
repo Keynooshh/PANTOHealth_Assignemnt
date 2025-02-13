@@ -15,7 +15,6 @@ import { SignalsDataService } from './signals.service';
 @Controller('/v1/signals')
 export class SignalsController {
   constructor(private readonly signalDataService: SignalsDataService) {}
-
   @Post()
   async insertXrayData(@Body() createSignalData: any) {
     return this.signalDataService.create(createSignalData);

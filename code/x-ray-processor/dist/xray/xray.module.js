@@ -13,6 +13,7 @@ const xray_schema_1 = require("./xray.schema");
 const xray_service_1 = require("./xray.service");
 const xray_controller_1 = require("./xray.controller");
 const signals_module_1 = require("../signals/signals.module");
+const Logger_module_1 = require("../Logger.module");
 let XrayDataModule = class XrayDataModule {
 };
 exports.XrayDataModule = XrayDataModule;
@@ -23,6 +24,7 @@ exports.XrayDataModule = XrayDataModule = __decorate([
                 { name: xray_schema_1.XrayData.name, schema: xray_schema_1.XrayDataSchema },
             ]),
             signals_module_1.SignalsModule,
+            Logger_module_1.LoggerModule,
         ],
         controllers: [xray_controller_1.XrayController],
         providers: [xray_service_1.XrayDataService],

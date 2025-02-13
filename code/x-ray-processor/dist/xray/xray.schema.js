@@ -9,27 +9,23 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.XrayDataSchema = exports.XrayData = exports.DeviceData = exports.DataPoint = exports.Location = void 0;
+exports.XrayDataSchema = exports.XrayData = exports.DataPoint = exports.Coordinates = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
-let Location = class Location {
+let Coordinates = class Coordinates {
 };
-exports.Location = Location;
+exports.Coordinates = Coordinates;
 __decorate([
     (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", Number)
-], Location.prototype, "x", void 0);
+], Coordinates.prototype, "x", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", Number)
-], Location.prototype, "y", void 0);
-__decorate([
-    (0, mongoose_1.Prop)({ required: true }),
-    __metadata("design:type", Number)
-], Location.prototype, "speed", void 0);
-exports.Location = Location = __decorate([
+], Coordinates.prototype, "y", void 0);
+exports.Coordinates = Coordinates = __decorate([
     (0, mongoose_1.Schema)({ _id: false })
-], Location);
+], Coordinates);
 let DataPoint = class DataPoint {
 };
 exports.DataPoint = DataPoint;
@@ -38,32 +34,30 @@ __decorate([
     __metadata("design:type", Number)
 ], DataPoint.prototype, "time", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Location, required: true }),
-    __metadata("design:type", Location)
-], DataPoint.prototype, "location", void 0);
-exports.DataPoint = DataPoint = __decorate([
-    (0, mongoose_1.Schema)({ _id: false })
-], DataPoint);
-let DeviceData = class DeviceData {
-};
-exports.DeviceData = DeviceData;
-__decorate([
-    (0, mongoose_1.Prop)({ type: [DataPoint], required: true }),
-    __metadata("design:type", Array)
-], DeviceData.prototype, "data", void 0);
+    (0, mongoose_1.Prop)({ type: Coordinates, required: true }),
+    __metadata("design:type", Coordinates)
+], DataPoint.prototype, "coordinates", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", Number)
-], DeviceData.prototype, "time", void 0);
-exports.DeviceData = DeviceData = __decorate([
+], DataPoint.prototype, "speed", void 0);
+exports.DataPoint = DataPoint = __decorate([
     (0, mongoose_1.Schema)({ _id: false })
-], DeviceData);
+], DataPoint);
 let XrayData = class XrayData extends mongoose_2.Document {
 };
 exports.XrayData = XrayData;
 __decorate([
-    (0, mongoose_1.Prop)({ type: Object, of: DeviceData, required: true }),
-    __metadata("design:type", Map)
+    (0, mongoose_1.Prop)({ type: [DataPoint], required: true }),
+    __metadata("design:type", Array)
+], XrayData.prototype, "data", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], XrayData.prototype, "time", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", String)
 ], XrayData.prototype, "deviceId", void 0);
 exports.XrayData = XrayData = __decorate([
     (0, mongoose_1.Schema)({ collection: 'x-ray-data' })

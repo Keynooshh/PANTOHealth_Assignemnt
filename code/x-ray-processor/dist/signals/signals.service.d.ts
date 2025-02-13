@@ -1,15 +1,13 @@
 import { SignalData } from './signals.schema';
 import { Model } from 'mongoose';
-import { DeviceData } from 'src/xray/xray.schema';
+import { XrayData } from 'src/xray/xray.schema';
+import { AppLogger } from 'src/AppLogger.service';
 export declare class SignalsDataService {
     private readonly signalDataModel;
-    constructor(signalDataModel: Model<SignalData>);
-    create(signalData: any): Promise<import("mongoose").Document<unknown, {}, SignalData> & SignalData & Required<{
-        _id: unknown;
-    }> & {
-        __v: number;
-    }>;
-    processSignalData(deviceData: DeviceData, deviceId: string): Promise<void>;
+    private readonly logger;
+    constructor(signalDataModel: Model<SignalData>, logger: AppLogger);
+    create(signalData: any): Promise<SignalData>;
+    processSignalData(deviceData: XrayData): Promise<void>;
     getAll(): Promise<(import("mongoose").Document<unknown, {}, SignalData> & SignalData & Required<{
         _id: unknown;
     }> & {

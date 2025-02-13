@@ -1,10 +1,12 @@
 import { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { XrayDataService } from '../xray/xray.service';
 import { ConfigService } from '@nestjs/config';
+import { AppLogger } from 'src/AppLogger.service';
 export declare class RMQConsumerService implements OnModuleInit, OnModuleDestroy {
     private readonly dataProcessingService;
     private readonly configService;
-    constructor(dataProcessingService: XrayDataService, configService: ConfigService);
+    private readonly logger;
+    constructor(dataProcessingService: XrayDataService, configService: ConfigService, logger: AppLogger);
     private connection;
     private channel;
     private queue;

@@ -8,18 +8,22 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var RMQConsumerService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RMQConsumerService = void 0;
 const common_1 = require("@nestjs/common");
 const rmq = require("amqplib");
 const xray_service_1 = require("../xray/xray.service");
 const config_1 = require("@nestjs/config");
-let RMQConsumerService = class RMQConsumerService {
-    constructor(dataProcessingService, configService) {
+const AppLogger_service_1 = require("../AppLogger.service");
+let RMQConsumerService = RMQConsumerService_1 = class RMQConsumerService {
+    constructor(dataProcessingService, configService, logger) {
         this.dataProcessingService = dataProcessingService;
         this.configService = configService;
+        this.logger = logger;
         this.queue = this.configService.get('RMQ_QUEUE');
         this.uri = this.configService.get('RMQ_URI');
+        logger.setContext(RMQConsumerService_1.name);
     }
     async onModuleInit() {
         await this.connect();
@@ -41,22 +45,21 @@ let RMQConsumerService = class RMQConsumerService {
             this.connection = await rmq.connect(this.uri);
             this.channel = await this.connection.createChannel();
             await this.channel.assertQueue(this.queue, { durable: true });
-            console.log('Connected to RabbitMQ as Consumer');
+            this.logger.log('Connected to RabbitMQ as Consumer');
         }
         catch (error) {
-            console.error('Error connecting to RabbitMQ', error);
+            this.logger.error('Error connecting to RabbitMQ:\n' + error);
         }
     }
     async consumeMessages() {
         if (!this.channel) {
-            console.error('RabbitMQ channel is not initialized');
+            this.logger.error('RabbitMQ channel is not initialized');
             return;
         }
-        console.log('Started consuming messages from queue:', this.queue);
+        this.logger.log('Started consuming messages from queue.');
         await this.channel.consume(this.queue, async (message) => {
             if (message) {
                 const content = JSON.parse(message.content.toString());
-                console.log('Received message:', content);
                 await this.dataProcessingService.processData(content);
                 this.channel.ack(message);
             }
@@ -64,9 +67,10 @@ let RMQConsumerService = class RMQConsumerService {
     }
 };
 exports.RMQConsumerService = RMQConsumerService;
-exports.RMQConsumerService = RMQConsumerService = __decorate([
+exports.RMQConsumerService = RMQConsumerService = RMQConsumerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [xray_service_1.XrayDataService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        AppLogger_service_1.AppLogger])
 ], RMQConsumerService);
 //# sourceMappingURL=rmq.service.js.map

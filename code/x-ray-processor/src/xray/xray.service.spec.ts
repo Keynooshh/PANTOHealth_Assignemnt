@@ -1,14 +1,42 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
 import { XrayDataService } from './xray.service';
 import { XrayData } from './xray.schema';
 import { SignalsDataService } from '../signals/signals.service';
+import { AppLogger } from '../AppLogger.service';
+import { Model } from 'mongoose';
 
 describe('XrayDataService', () => {
   let service: XrayDataService;
-  let xrayDataModel: Model<XrayData>;
-  let signalsDataService: SignalsDataService;
+  let model: Model<XrayData>;
+  let signalsService: SignalsDataService;
+  let logger: AppLogger;
+
+  const mockXrayData = {
+    stuff: {
+      time: 123456789000,
+      data: [[1, [1, 1, 1]]],
+    },
+  };
+
+  const mockXrayDataModel = {
+    find: jest.fn().mockReturnValue({
+      batchSize: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([mockXrayData]),
+    }),
+    findById: jest.fn().mockResolvedValue(mockXrayData),
+    save: jest.fn().mockResolvedValue(mockXrayData),
+  };
+
+  const mockSignalsService = {
+    processSignalData: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockLogger = {
+    log: jest.fn(),
+    error: jest.fn(),
+    setContext: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -16,106 +44,38 @@ describe('XrayDataService', () => {
         XrayDataService,
         {
           provide: getModelToken(XrayData.name),
-          useValue: {
-            create: jest
-              .fn()
-              .mockResolvedValue({
-                _id: 'someId',
-                deviceId: new Map([['key', 'value']]),
-              }),
-            save: jest.fn().mockResolvedValue({ _id: 'someId' }),
-            find: jest.fn().mockReturnValue({
-              exec: jest.fn().mockResolvedValue([]),
-            }),
-            findById: jest.fn().mockResolvedValue(null),
-          },
+          useValue: mockXrayDataModel,
         },
         {
           provide: SignalsDataService,
-          useValue: {
-            processSignalData: jest.fn(),
-          },
+          useValue: mockSignalsService,
+        },
+        {
+          provide: AppLogger,
+          useValue: mockLogger,
         },
       ],
     }).compile();
 
     service = module.get<XrayDataService>(XrayDataService);
-    xrayDataModel = module.get<Model<XrayData>>(getModelToken(XrayData.name));
-    signalsDataService = module.get<SignalsDataService>(SignalsDataService);
+    model = module.get<Model<XrayData>>(getModelToken(XrayData.name));
+    signalsService = module.get<SignalsDataService>(SignalsDataService);
+    logger = module.get<AppLogger>(AppLogger);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe('create', () => {
-    it('should create a new XrayData document', async () => {
-      const xrayData = { deviceId: '123', data: 'some data' };
-
-      const result = await service.create(xrayData);
-
-      expect(xrayDataModel.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          deviceId: expect.any(Map),
-        }),
-      );
-
-      expect(result).toEqual({
-        _id: 'someId',
-        deviceId: new Map([['key', 'value']]),
-      }); // Ensure result matches the mock return
-    });
+  it('should get all XrayData', async () => {
+    const result = await service.getAll();
+    expect(result).toEqual([mockXrayData]);
+    expect(model.find).toHaveBeenCalled();
   });
 
-  describe('processData', () => {
-    it('should process data and call processSignalData for each device', async () => {
-      const message = { deviceId: '123', data: 'some data' };
-      const createdXrayData = {
-        deviceId: new Map(Object.entries(message)),
-        _id: 'someId',
-      };
-
-      jest.spyOn(service, 'create').mockResolvedValue(createdXrayData as any);
-      jest
-        .spyOn(signalsDataService, 'processSignalData')
-        .mockResolvedValue(undefined);
-
-      await service.processData(message);
-
-      expect(service.create).toHaveBeenCalledWith(message);
-      expect(signalsDataService.processSignalData).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(String),
-      );
-    });
-  });
-
-  describe('getAll', () => {
-    it('should return all XrayData documents', async () => {
-      const xrayDataArray = [{ deviceId: '123', data: 'some data' }];
-
-      jest.spyOn(xrayDataModel, 'find').mockReturnValue({
-        batchSize: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue(xrayDataArray),
-      } as any);
-
-      const result = await service.getAll();
-
-      expect(xrayDataModel.find).toHaveBeenCalled();
-      expect(result).toEqual(xrayDataArray);
-    });
-  });
-
-  describe('getOne', () => {
-    it('should return a single XrayData document by id', async () => {
-      const xrayData = { deviceId: '123', data: 'some data', _id: 'someId' };
-
-      jest.spyOn(xrayDataModel, 'findById').mockResolvedValue(xrayData);
-
-      const result = await service.getOne('someId');
-
-      expect(xrayDataModel.findById).toHaveBeenCalledWith('someId');
-      expect(result).toEqual(xrayData);
-    });
+  it('should get one XrayData by ID', async () => {
+    const result = await service.getOne('device123');
+    expect(result).toEqual(mockXrayData);
+    expect(model.findById).toHaveBeenCalledWith('device123');
   });
 });

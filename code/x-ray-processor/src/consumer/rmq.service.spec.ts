@@ -1,60 +1,43 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RMQConsumerService } from './rmq.service';
 import { XrayDataService } from '../xray/xray.service';
 import { ConfigService } from '@nestjs/config';
+import { AppLogger } from 'src/AppLogger.service';
 import * as rmq from 'amqplib';
+import { RMQConsumerService } from './rmq.service';
 
-jest.mock('amqplib', () => ({
-  connect: jest.fn(),
-}));
+jest.mock('amqplib');
 
 describe('RMQConsumerService', () => {
   let service: RMQConsumerService;
   let mockDataProcessingService: jest.Mocked<XrayDataService>;
   let mockConfigService: jest.Mocked<ConfigService>;
-  let mockConnection: jest.Mocked<rmq.Connection>;
-  let mockChannel: jest.Mocked<rmq.Channel>;
+  let mockLogger: jest.Mocked<AppLogger>;
 
   beforeEach(async () => {
     mockDataProcessingService = {
       processData: jest.fn(),
-    } as unknown as jest.Mocked<XrayDataService>;
+    } as any;
 
     mockConfigService = {
-      get: jest.fn(),
-    } as unknown as jest.Mocked<ConfigService>;
+      get: jest.fn().mockImplementation((key: string) => {
+        if (key === 'RMQ_QUEUE') return 'test-queue';
+        if (key === 'RMQ_URI') return 'amqp://localhost';
+        return undefined;
+      }),
+    } as any;
 
-    mockConnection = {
-      createChannel: jest.fn(),
-      close: jest.fn(),
-    } as unknown as jest.Mocked<rmq.Connection>;
-
-    mockChannel = {
-      assertQueue: jest.fn(),
-      consume: jest.fn(),
-      ack: jest.fn(),
-      close: jest.fn(),
-    } as unknown as jest.Mocked<rmq.Channel>;
-
-    (rmq.connect as jest.Mock).mockResolvedValue(mockConnection);
-    mockConnection.createChannel.mockResolvedValue(mockChannel);
-
-    mockConfigService.get.mockImplementation((key: string) => {
-      switch (key) {
-        case 'RMQ_QUEUE':
-          return 'test_queue';
-        case 'RMQ_URI':
-          return 'amqp://localhost';
-        default:
-          return null;
-      }
-    });
+    mockLogger = {
+      setContext: jest.fn(),
+      log: jest.fn(),
+      error: jest.fn(),
+    } as any;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RMQConsumerService,
         { provide: XrayDataService, useValue: mockDataProcessingService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: AppLogger, useValue: mockLogger },
       ],
     }).compile();
 
@@ -65,106 +48,96 @@ describe('RMQConsumerService', () => {
     jest.clearAllMocks();
   });
 
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
   describe('onModuleInit', () => {
-    it('should call connect and consumeMessages', async () => {
-      const connectSpy = jest.spyOn(service, 'connect');
-      const consumeMessagesSpy = jest.spyOn(service, 'consumeMessages');
+    it('should connect and start consuming messages', async () => {
+      const mockConnection = { createChannel: jest.fn() };
+      const mockChannel = { assertQueue: jest.fn(), consume: jest.fn() };
+      (rmq.connect as jest.Mock).mockResolvedValue(mockConnection);
+      mockConnection.createChannel.mockResolvedValue(mockChannel);
 
       await service.onModuleInit();
 
-      expect(connectSpy).toHaveBeenCalled();
-      expect(consumeMessagesSpy).toHaveBeenCalled();
+      expect(rmq.connect).toHaveBeenCalledWith('amqp://localhost'); // Ensure URI is correct
+      expect(mockConnection.createChannel).toHaveBeenCalled();
+      expect(mockChannel.assertQueue).toHaveBeenCalledWith('test-queue', {
+        durable: true,
+      });
+      expect(mockLogger.log).toHaveBeenCalledWith(
+        'Connected to RabbitMQ as Consumer',
+      );
+      expect(mockChannel.consume).toHaveBeenCalledWith(
+        'test-queue',
+        expect.any(Function),
+      );
+      expect(mockLogger.log).toHaveBeenCalledWith(
+        'Started consuming messages from queue.',
+      );
+    });
+
+    it('should log error if connection fails', async () => {
+      const error = new Error('Connection failed');
+      (rmq.connect as jest.Mock).mockRejectedValue(error);
+
+      await service.onModuleInit();
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Error connecting to RabbitMQ:\n' + error,
+      );
     });
   });
 
   describe('onModuleDestroy', () => {
-    it('should call close', async () => {
-      const closeSpy = jest.spyOn(service, 'close');
+    it('should close the connection and channel', async () => {
+      const mockConnection = { close: jest.fn() };
+      const mockChannel = { close: jest.fn() };
+      (service as any).connection = mockConnection;
+      (service as any).channel = mockChannel;
 
       await service.onModuleDestroy();
-
-      expect(closeSpy).toHaveBeenCalled();
-    });
-  });
-
-  describe('connect', () => {
-    it('should establish a connection and create a channel', async () => {
-      await service.connect();
-
-      expect(rmq.connect).toHaveBeenCalledWith('amqp://localhost');
-      expect(mockConnection.createChannel).toHaveBeenCalled();
-      expect(mockChannel.assertQueue).toHaveBeenCalledWith('test_queue', {
-        durable: true,
-      });
-    });
-
-    it('should log an error if connection fails', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      (rmq.connect as jest.Mock).mockRejectedValueOnce(
-        new Error('Connection failed'),
-      );
-
-      await service.connect();
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error connecting to RabbitMQ',
-        expect.any(Error),
-      );
-    });
-  });
-
-  describe('consumeMessages', () => {
-    it('should consume messages from the queue and process them', async () => {
-      const mockMessage = {
-        content: Buffer.from(JSON.stringify({ test: 'data' })),
-      };
-      mockChannel.consume.mockImplementation((queue, callback) => {
-        callback(mockMessage);
-        return Promise.resolve({ consumerTag: 'test-consumer' });
-      });
-
-      service['channel'] = mockChannel;
-
-      await service.consumeMessages();
-
-      expect(mockChannel.consume).toHaveBeenCalledWith(
-        'test_queue',
-        expect.any(Function),
-      );
-      expect(mockDataProcessingService.processData).toHaveBeenCalledWith({
-        test: 'data',
-      });
-      expect(mockChannel.ack).toHaveBeenCalledWith(mockMessage);
-    });
-
-    it('should log an error if the channel is not initialized', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      service['channel'] = null;
-
-      await service.consumeMessages();
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'RabbitMQ channel is not initialized',
-      );
-    });
-  });
-
-  describe('close', () => {
-    it('should close the channel and connection', async () => {
-      service['channel'] = mockChannel;
-      service['connection'] = mockConnection;
-
-      await service.close();
 
       expect(mockChannel.close).toHaveBeenCalled();
       expect(mockConnection.close).toHaveBeenCalled();
     });
 
-    it('should not throw an error if channel or connection is not initialized', async () => {
-      service['channel'] = null;
-      service['connection'] = null;
+    it('should not throw error if connection or channel is not initialized', async () => {
+      (service as any).connection = null;
+      (service as any).channel = null;
 
-      await expect(service.close()).resolves.not.toThrow();
+      await expect(service.onModuleDestroy()).resolves.not.toThrow();
+    });
+  });
+
+  describe('consumeMessages', () => {
+    it('should process message and acknowledge it', async () => {
+      const mockChannel = { consume: jest.fn(), ack: jest.fn() };
+      const mockMessage = {
+        content: Buffer.from(JSON.stringify({ data: 'test' })),
+      };
+      (service as any).channel = mockChannel;
+
+      await service.consumeMessages();
+
+      const consumeCallback = mockChannel.consume.mock.calls[0][1];
+      await consumeCallback(mockMessage);
+
+      expect(mockDataProcessingService.processData).toHaveBeenCalledWith({
+        data: 'test',
+      });
+      expect(mockChannel.ack).toHaveBeenCalledWith(mockMessage);
+    });
+
+    it('should log error if channel is not initialized', async () => {
+      (service as any).channel = null;
+
+      await service.consumeMessages();
+
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'RabbitMQ channel is not initialized',
+      );
     });
   });
 });

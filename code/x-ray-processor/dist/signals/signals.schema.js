@@ -9,9 +9,45 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.signalDataSchema = exports.SignalData = void 0;
+exports.signalDataSchema = exports.SignalData = exports.GeoData = exports.TimeRange = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
+let TimeRange = class TimeRange {
+};
+exports.TimeRange = TimeRange;
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], TimeRange.prototype, "minTime", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], TimeRange.prototype, "maxTime", void 0);
+exports.TimeRange = TimeRange = __decorate([
+    (0, mongoose_1.Schema)({ _id: false })
+], TimeRange);
+let GeoData = class GeoData {
+};
+exports.GeoData = GeoData;
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], GeoData.prototype, "minX", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], GeoData.prototype, "maxX", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], GeoData.prototype, "minY", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], GeoData.prototype, "maxY", void 0);
+exports.GeoData = GeoData = __decorate([
+    (0, mongoose_1.Schema)({ _id: false })
+], GeoData);
 let SignalData = class SignalData extends mongoose_2.Document {
 };
 exports.SignalData = SignalData;
@@ -27,6 +63,22 @@ __decorate([
     (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", Number)
 ], SignalData.prototype, "time", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: TimeRange, required: true }),
+    __metadata("design:type", TimeRange)
+], SignalData.prototype, "timeRange", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], SignalData.prototype, "averageSpeed", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], SignalData.prototype, "totalDistance", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: GeoData, required: true }),
+    __metadata("design:type", GeoData)
+], SignalData.prototype, "geoData", void 0);
 exports.SignalData = SignalData = __decorate([
     (0, mongoose_1.Schema)({ collection: 'signals' })
 ], SignalData);
