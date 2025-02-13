@@ -24,7 +24,7 @@ let XrayDataService = class XrayDataService {
         this.signalDataService = signalDataService;
     }
     async create(xrayData) {
-        const createData = new this.xrayDataModel({
+        const createData = this.xrayDataModel({
             deviceId: new Map(Object.entries(xrayData)),
         });
         return this.xrayDataModel.insertOne(createData);

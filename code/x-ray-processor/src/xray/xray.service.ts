@@ -13,8 +13,8 @@ export class XrayDataService {
     private readonly signalDataService: SignalsDataService,
   ) {}
 
-  async create(xrayData: any) {     //THIS MOTHER FUCKER 
-    const createData = new this.xrayDataModel({
+  async create(xrayData: any) { 
+    const createData = this.xrayDataModel({
       deviceId: new Map(Object.entries(xrayData)),
     });
     return this.xrayDataModel.insertOne(createData);
