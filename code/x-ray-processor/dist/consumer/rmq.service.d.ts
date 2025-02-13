@@ -14,6 +14,6 @@ export declare class RMQConsumerService implements OnModuleInit, OnModuleDestroy
     onModuleInit(): Promise<void>;
     onModuleDestroy(): Promise<void>;
     close(): Promise<void>;
-    connect(): Promise<void>;
+    connect(retries?: number, delay?: number): any;
     consumeMessages(): Promise<void>;
 }

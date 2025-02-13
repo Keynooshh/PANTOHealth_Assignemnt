@@ -1,0 +1,52 @@
+version: "3.1"
+
+services:
+  producer:
+    build: ./code/rmq-producer
+    hostname: producer
+    ports:
+      - "3000:3000"
+    networks:
+      - node_network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  consumer:
+    build: ./code/x-ray-processor
+    hostname: consumer
+    ports:
+      - "8080:8080"
+    networks:
+      - node_network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  mongo:
+    image: mongo
+    hostname: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - node_network
+  rabbitmq:
+    hostname: rmq
+    image: "rabbitmq:4-management"
+    ports:
+      - "15672:15672"
+    networks:
+      - node_network
+
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+networks:
+  node_network:

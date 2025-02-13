@@ -21,7 +21,7 @@ describe('RMQConsumerService', () => {
     mockConfigService = {
       get: jest.fn().mockImplementation((key: string) => {
         if (key === 'RMQ_QUEUE') return 'test-queue';
-        if (key === 'RMQ_URI') return 'amqp://localhost';
+        if (key === 'RMQ_URI') return 'amqp://guest:guest@rmq:5672';
         return undefined;
       }),
     } as any;
@@ -61,7 +61,7 @@ describe('RMQConsumerService', () => {
 
       await service.onModuleInit();
 
-      expect(rmq.connect).toHaveBeenCalledWith('amqp://localhost'); // Ensure URI is correct
+      expect(rmq.connect).toHaveBeenCalledWith('amqp://guest:guest@rmq:5672');
       expect(mockConnection.createChannel).toHaveBeenCalled();
       expect(mockChannel.assertQueue).toHaveBeenCalledWith('test-queue', {
         durable: true,

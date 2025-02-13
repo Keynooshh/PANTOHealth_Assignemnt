@@ -40,20 +40,27 @@ describe('RMQService', () => {
   describe('onModuleInit', () => {
     it('should call connect on module initialization', async () => {
       await service.onModuleInit();
-      expect(rmq.connect).toHaveBeenCalledWith('amqp://guest:guest@localhost:5672');
+      expect(rmq.connect).toHaveBeenCalledWith('amqp://guest:guest@rmq:5672');
       expect(mockConnection.createChannel).toHaveBeenCalled();
-      expect(mockChannel.assertQueue).toHaveBeenCalledWith('x-ray-queue', { durable: true });
+      expect(mockChannel.assertQueue).toHaveBeenCalledWith('x-ray-queue', {
+        durable: true,
+      });
     });
 
     it('should log an error if connection fails', async () => {
       const error = new Error('Connection failed');
       (rmq.connect as jest.Mock).mockRejectedValue(error);
 
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       await service.onModuleInit();
 
-      expect(consoleSpy).toHaveBeenCalledWith('Error connecting to RabbitMQ', error);
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Error connecting to RabbitMQ',
+        error,
+      );
     });
   });
 
@@ -73,11 +80,15 @@ describe('RMQService', () => {
 
     it('should log an error if the channel is not initialized', () => {
       const message = { key: 'value' };
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
 
       service.sendMessage(message);
 
-      expect(consoleSpy).toHaveBeenCalledWith('RabbitMQ channel is not initialized');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'RabbitMQ channel is not initialized',
+      );
       expect(mockChannel.sendToQueue).not.toHaveBeenCalled();
     });
   });

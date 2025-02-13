@@ -40,14 +40,21 @@ let RMQConsumerService = RMQConsumerService_1 = class RMQConsumerService {
             await this.connection.close();
         }
     }
-    async connect() {
+    async connect(retries = 5, delay = 5000) {
         try {
+            this.logger.log('Connecting to:' + this.uri);
             this.connection = await rmq.connect(this.uri);
             this.channel = await this.connection.createChannel();
             await this.channel.assertQueue(this.queue, { durable: true });
             this.logger.log('Connected to RabbitMQ as Consumer');
+            this.logger.log('Consuming from:' + this.queue);
         }
         catch (error) {
+            if (retries > 0) {
+                console.warn(`Failed to connect to RabbitMQ. Retrying in ${delay}ms...`);
+                await new Promise((resolve) => setTimeout(resolve, delay));
+                return this.connect(retries - 1, delay);
+            }
             this.logger.error('Error connecting to RabbitMQ:\n' + error);
         }
     }
